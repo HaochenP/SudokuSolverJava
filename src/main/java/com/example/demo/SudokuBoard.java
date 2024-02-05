@@ -125,36 +125,89 @@ public class SudokuBoard {
         }
     }
 
-    private static boolean checkRow(int[][] sudoku, int row) {
-        for (int j = 0; j < 9; j++) {
-            if (sudoku[row][j] != 0) {
-                if (!checkNumber(sudoku, row, j, sudoku[row][j])) {
-                    return false;
+    public static int[][] sudokuSolver(int[][] sudoku) {
+        return solveSudoku(sudoku, 0, 0);
+    }
+
+    private static int[][] solveSudoku(int[][] sudoku, int row, int col) {
+        int[] emptyCell = findNextEmptyCell(sudoku, row, col);
+        if (emptyCell == null) {
+            return sudoku;
+        }
+        int nextRow = emptyCell[0];
+        int nextCol = emptyCell[1];
+
+        for (int num = 1; num <= 9; num++) {
+            if (isValidPlacement(sudoku, nextRow, nextCol, num)) {
+                sudoku[nextRow][nextCol] = num;
+                int[][] solved = solveSudoku(sudoku, nextRow, nextCol + 1);
+                if (solved != null) {
+                    return solved;
+                }
+                sudoku[nextRow][nextCol] = 0; // Backtrack
+            }
+        }
+        return null; 
+    }
+    private static boolean isValidPlacement(int[][] sudoku, int row, int col, int num) {
+        for (int i = 0; i < 9; i++) {
+            if (sudoku[row][i] == num || sudoku[i][col] == num) {
+                return false;
+            }
+            int gridRow = 3 * (row / 3) + i / 3;
+            int gridCol = 3 * (col / 3) + i % 3;
+            if (sudoku[gridRow][gridCol] == num) {
+                return false;
+            }
+        }
+        return true; 
+    }
+
+    private static int[] findNextEmptyCell(int[][] sudoku, int startRow, int startCol) {
+        for (int row = startRow; row < 9; row++) {
+            for (int col = (row == startRow ? startCol : 0); col < 9; col++) {
+                if (sudoku[row][col] == 0) {
+                    return new int[]{row, col};
                 }
             }
         }
-        return true;
+        return null; 
     }
 
-    public int[][] sudokuSolver() {
-
-        int[][] sudoku = this.board;
-        int[] empty = nextEmpty(sudoku);
-        if (empty[0] == -1) {
-            return sudoku;
+    public static int[][] sudokuSolverHeuristic(int[][] sudoku) {
+        ArrayList<ArrayList<Integer>> emptyCells = getEmptyCells(sudoku);
+        if (emptyCells.isEmpty()) {
+            return initialCheck(sudoku) ? sudoku : null;
         }
-        int row = empty[0];
-        int column = empty[1];
-        ArrayList<Integer> availableNumbers = availableNumbers(sudoku, row, column);
-        for (int number : availableNumbers) {
+        
+        ArrayList<Integer> bestCell = null;
+        ArrayList<Integer> possibleValues = null;
+        int minPossibleValues = Integer.MAX_VALUE;
+        for (ArrayList<Integer> cell : emptyCells) {
+            ArrayList<Integer> availableNumbers = availableNumbers(sudoku, cell.get(0), cell.get(1));
+            int size = availableNumbers.size();
+            if (size < minPossibleValues) {
+                minPossibleValues = size;
+                bestCell = cell;
+                possibleValues = availableNumbers;
+            }
+        }
+
+        if (bestCell == null || possibleValues.isEmpty()) {
+            return null;
+        }
+
+        int row = bestCell.get(0);
+        int column = bestCell.get(1);
+        for (int number : possibleValues) {
             sudoku[row][column] = number;
-            int[][] solvedSudoku = sudokuSolver();
+            int[][] solvedSudoku = sudokuSolverHeuristic(sudoku);
             if (solvedSudoku != null) {
                 return solvedSudoku;
             }
             sudoku[row][column] = 0;
         }
+        
         return null;
-
     }
 }
