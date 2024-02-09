@@ -24,7 +24,7 @@ public class SudokuBoard {
     }
 
 
-    private static boolean checkNumber(int[][] sudoku, int row, int column, int number) {
+    private boolean checkNumber(int[][] sudoku, int row, int column, int number) {
         int[] sudoku_row = sudoku[row];
         int[] sudoku_column = new int[9];
         for (int i = 0; i < 9; i++) {
@@ -57,20 +57,7 @@ public class SudokuBoard {
         return true;
     }
 
-    private static ArrayList<Integer> availableNumbers(int[][] sudoko, int row, int column) {
-        ArrayList<Integer> availableNumbers = new ArrayList<>();
-        for (int i = 1; i < 10; i++) {
-            // System.out.printf("row: %d, column: %d, number: %d\n", row, column, i);
-            if (checkNumber(sudoko, row, column, i)) {
-
-                availableNumbers.add(i);
-            }
-        }
-        return availableNumbers;
-
-    }
-
-    public static int[] nextEmpty(int[][] sudoku) {
+    public int[] nextEmpty(int[][] sudoku) {
         int[] empty = { -1, -1 };
         for (int i = 0; i < 9; i++) {
             for (int j = 0; j < 9; j++) {
@@ -84,28 +71,25 @@ public class SudokuBoard {
         return empty;
     }
 
-    public static boolean initialCheck(int[][] sudoku) {
-
-        long start = System.currentTimeMillis();
-        for (int i = 0; i < 9; i++) {
-            for (int j = 0; j < 9; j++) {
-                if (sudoku[i][j] != 0) {
-                    if (!checkNumber(sudoku, i, j, sudoku[i][j])) {
-                        return false;
+    public boolean isValidBoard(boolean concurrent) {
+        if(!concurrent) {
+            long start = System.currentTimeMillis();
+            for (int i = 0; i < 9; i++) {
+                for (int j = 0; j < 9; j++) {
+                    if (this.board[i][j] != 0) {
+                        if (!checkNumber(board, i, j, board[i][j])) {
+                            return false;
+                        }
                     }
                 }
             }
         }
-
-        long end = System.currentTimeMillis();
-        System.out.println("Time taken: " + (end - start) + "ms");
-        // return true;
-        long start1 = System.currentTimeMillis();
+        
         ExecutorService executor = Executors.newFixedThreadPool(9);
         ArrayList<Callable<Boolean>> tasks = new ArrayList<>();
         for (int i = 0; i < 9; i++) {
             final int row = i;
-            tasks.add(() -> checkRow(sudoku, row));
+            tasks.add(() -> checkRow( row));
         }
         try {
             List<Future<Boolean>> results = executor.invokeAll(tasks);
@@ -120,36 +104,46 @@ public class SudokuBoard {
             return false;
         } finally {
             executor.shutdown();
-            long end1 = System.currentTimeMillis();
-            System.out.println("Time taken: " + (end1 - start1) + "ms");
         }
     }
 
-    public static int[][] sudokuSolver(int[][] sudoku) {
-        return solveSudoku(sudoku, 0, 0);
+    private boolean checkRow(int row) {
+        for (int i = 0; i < 9; i++) {
+            if (this.board[row][i] != 0) {
+                if (!checkNumber(this.board, row, i, this.board[row][i])) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
-    private static int[][] solveSudoku(int[][] sudoku, int row, int col) {
-        int[] emptyCell = findNextEmptyCell(sudoku, row, col);
+
+    public int[][] sudokuSolver() {
+        return solveSudoku(0, 0);
+    }
+
+    private int[][] solveSudoku(int row, int col) {
+        int[] emptyCell = findNextEmptyCell(this.board, row, col);
         if (emptyCell == null) {
-            return sudoku;
+            return this.board;
         }
         int nextRow = emptyCell[0];
         int nextCol = emptyCell[1];
 
         for (int num = 1; num <= 9; num++) {
-            if (isValidPlacement(sudoku, nextRow, nextCol, num)) {
-                sudoku[nextRow][nextCol] = num;
-                int[][] solved = solveSudoku(sudoku, nextRow, nextCol + 1);
+            if (isValidPlacement(this.board, nextRow, nextCol, num)) {
+                this.board[nextRow][nextCol] = num;
+                int[][] solved = solveSudoku(nextRow, nextCol + 1);
                 if (solved != null) {
                     return solved;
                 }
-                sudoku[nextRow][nextCol] = 0; // Backtrack
+                this.board[nextRow][nextCol] = 0; 
             }
         }
         return null; 
     }
-    private static boolean isValidPlacement(int[][] sudoku, int row, int col, int num) {
+    private boolean isValidPlacement(int[][] sudoku, int row, int col, int num) {
         for (int i = 0; i < 9; i++) {
             if (sudoku[row][i] == num || sudoku[i][col] == num) {
                 return false;
@@ -163,7 +157,7 @@ public class SudokuBoard {
         return true; 
     }
 
-    private static int[] findNextEmptyCell(int[][] sudoku, int startRow, int startCol) {
+    private int[] findNextEmptyCell(int[][] sudoku, int startRow, int startCol) {
         for (int row = startRow; row < 9; row++) {
             for (int col = (row == startRow ? startCol : 0); col < 9; col++) {
                 if (sudoku[row][col] == 0) {
@@ -174,40 +168,4 @@ public class SudokuBoard {
         return null; 
     }
 
-    public static int[][] sudokuSolverHeuristic(int[][] sudoku) {
-        ArrayList<ArrayList<Integer>> emptyCells = getEmptyCells(sudoku);
-        if (emptyCells.isEmpty()) {
-            return initialCheck(sudoku) ? sudoku : null;
-        }
-        
-        ArrayList<Integer> bestCell = null;
-        ArrayList<Integer> possibleValues = null;
-        int minPossibleValues = Integer.MAX_VALUE;
-        for (ArrayList<Integer> cell : emptyCells) {
-            ArrayList<Integer> availableNumbers = availableNumbers(sudoku, cell.get(0), cell.get(1));
-            int size = availableNumbers.size();
-            if (size < minPossibleValues) {
-                minPossibleValues = size;
-                bestCell = cell;
-                possibleValues = availableNumbers;
-            }
-        }
-
-        if (bestCell == null || possibleValues.isEmpty()) {
-            return null;
-        }
-
-        int row = bestCell.get(0);
-        int column = bestCell.get(1);
-        for (int number : possibleValues) {
-            sudoku[row][column] = number;
-            int[][] solvedSudoku = sudokuSolverHeuristic(sudoku);
-            if (solvedSudoku != null) {
-                return solvedSudoku;
-            }
-            sudoku[row][column] = 0;
-        }
-        
-        return null;
-    }
 }

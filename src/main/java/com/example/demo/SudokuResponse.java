@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 public class SudokuResponse {
-    @JsonProperty("newboard") // This aligns with the JSON property
+    @JsonProperty("newboard") 
     private NewBoard newBoard;
 
     public static class NewBoard{
@@ -46,7 +46,7 @@ public class SudokuResponse {
         @JsonProperty("difficulty")
         String difficulty;
 
-        // Getters and Setters
+
         public List<List<Integer>> getValue() {
             return value;
         }
@@ -72,7 +72,7 @@ public class SudokuResponse {
         }
     }
 
-    // This method processes the first grid's value into an int[][]
+
     public int[][] toBoard() {
         if (newBoard != null && !newBoard.getGrids().isEmpty()) {
             List<List<Integer>> values = newBoard.getGrids().get(0).getValue();
@@ -80,10 +80,9 @@ public class SudokuResponse {
                          .map(list -> list.stream().mapToInt(i -> i).toArray())
                          .toArray(int[][]::new);
         }
-        return new int[0][0]; // Return an empty array if no data
+        return new int[0][0]; 
     }
 
-    // Getters and Setters for newBoard
     public NewBoard getNewBoard() {
         return newBoard;
     }
